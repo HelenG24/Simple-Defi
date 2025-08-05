@@ -1,44 +1,69 @@
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 import { DeployFunction } from "hardhat-deploy/types";
-import { Contract } from "ethers";
+import { ethers } from "hardhat";
 
 /**
- * Deploys a contract named "YourContract" using the deployer account and
- * constructor arguments set to the deployer address
+ * Deploys DappToken, LPToken, and TokenFarm, and sets TokenFarm as the owner of DappToken.
  *
  * @param hre HardhatRuntimeEnvironment object.
  */
-const deployYourContract: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
-  /*
-    On localhost, the deployer account is the one that comes with Hardhat, which is already funded.
+const deployTokenFarm: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
+  const { deployments, getNamedAccounts } = hre;
+  const { deploy } = deployments;
+  const { deployer } = await getNamedAccounts();
 
-    When deploying to live networks (e.g `yarn deploy --network sepolia`), the deployer account
-    should have sufficient balance to pay for the gas fees for contract creation.
+  console.log("📡 Deploying contracts with account:", deployer);
 
-    You can generate a random account with `yarn generate` or `yarn account:import` to import your
-    existing PK which will fill DEPLOYER_PRIVATE_KEY_ENCRYPTED in the .env file (then used on hardhat.config.ts)
-    You can run the `yarn account` command to check your balance in every network.
-  */
-  const { deployer } = await hre.getNamedAccounts();
-  const { deploy } = hre.deployments;
-
-  await deploy("YourContract", {
+  //
+  // 1. Deploy DappToken
+  //
+  const dappTokenDeployment = await deploy("DappToken", {
     from: deployer,
-    // Contract constructor arguments
-    args: [deployer],
+    args: [deployer], // initialOwner
     log: true,
-    // autoMine: can be passed to the deploy function to make the deployment process faster on local networks by
-    // automatically mining the contract deployment transaction. There is no effect on live networks.
     autoMine: true,
   });
+  const dappTokenAddress = dappTokenDeployment.address;
+  console.log("✅ DappToken deployed to:", dappTokenAddress);
 
-  // Get the deployed contract to interact with it after deploying.
-  const yourContract = await hre.ethers.getContract<Contract>("YourContract", deployer);
-  console.log("👋 Initial greeting:", await yourContract.greeting());
+  //
+  // 2. Deploy LPToken
+  //
+  const lpTokenDeployment = await deploy("LPToken", {
+    from: deployer,
+    args: [deployer], // initialOwner
+    log: true,
+    autoMine: true,
+  });
+  const lpTokenAddress = lpTokenDeployment.address;
+  console.log("✅ LPToken deployed to:", lpTokenAddress);
+
+  //
+  // 3. Deploy TokenFarm
+  //
+  const tokenFarmDeployment = await deploy("TokenFarm", {
+    from: deployer,
+    args: [dappTokenAddress, lpTokenAddress],
+    log: true,
+    autoMine: true,
+  });
+  const tokenFarmAddress = tokenFarmDeployment.address;
+  console.log("✅ TokenFarm deployed to:", tokenFarmAddress);
+
+  //
+  // 4. Transfer ownership of DappToken to TokenFarm
+  //
+  const dappToken = await ethers.getContractAt("DappToken", dappTokenAddress);
+  const currentOwner = await dappToken.owner();
+
+  if (currentOwner.toLowerCase() !== tokenFarmAddress.toLowerCase()) {
+    const transferTx = await dappToken.transferOwnership(tokenFarmAddress);
+    await transferTx.wait();
+    console.log("🔑 Ownership of DappToken transferred to TokenFarm");
+  } else {
+    console.log("ℹ️ DappToken is already owned by TokenFarm");
+  }
 };
 
-export default deployYourContract;
-
-// Tags are useful if you have multiple deploy files and only want to run one of them.
-// e.g. yarn deploy --tags YourContract
-deployYourContract.tags = ["YourContract"];
+export default deployTokenFarm;
+deployTokenFarm.tags = ["All"];
