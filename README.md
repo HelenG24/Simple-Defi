@@ -29,11 +29,10 @@ Los usuarios pueden depositar tokens LP (Liquidity Provider Token) y ganar recom
 
 ---
 
-## 📜 Parámetros importantes
-
-- `REWARD_PER_BLOCK`: `1e18` (1 DAPP por bloque).
-- `totalStakingBalance`: Suma total de todos los tokens LP stakeados.
-- `checkpoints`: Último bloque en el que se calcularon recompensas por usuario.
+## Dirección Contratos Verificados
+- `DappToken.sol` : 0x837e06427596d85765179F014DefE20f4F2A7f9D
+- `LPToken.sol` : 0xCb0016DB25F4e6B4B68A3bDD5C1531B0c5162419
+- `TokenFarm.sol` : 0xe713d73850261d22713F995C1cf021274A224b82
 
 ---
 
